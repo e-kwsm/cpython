@@ -1090,8 +1090,12 @@ class Path(PurePath):
         if drv or root:
             raise NotImplementedError("Non-relative patterns are unsupported")
         selector = _make_selector(tuple(pattern_parts))
-        for p in selector.select_from(self):
-            yield p
+        dironly = pattern.endswith(self._flavour.sep) \
+                or self._flavour.altsep and pattern.endswith(self._flavour.altsep)
+        if not dironly:
+            yield from selector.select_from(self)
+        else:
+            yield from filter(lambda p: p.is_dir(), selector.select_from(self))
 
     def rglob(self, pattern):
         """Recursively yield all existing files (of any kind, including
@@ -1102,8 +1106,12 @@ class Path(PurePath):
         if drv or root:
             raise NotImplementedError("Non-relative patterns are unsupported")
         selector = _make_selector(("**",) + tuple(pattern_parts))
-        for p in selector.select_from(self):
-            yield p
+        dironly = pattern.endswith(self._flavour.sep) \
+                or self._flavour.altsep and pattern.endswith(self._flavour.altsep)
+        if not dironly:
+            yield from selector.select_from(self)
+        else:
+            yield from filter(lambda p: p.is_dir(), selector.select_from(self))
 
     def absolute(self):
         """Return an absolute version of this path.  This function works

@@ -1427,6 +1427,13 @@ class _BasePathTest(object):
         else:
             _check(p.glob("*/fileB"), ['dirB/fileB', 'linkB/fileB'])
 
+        if not support.can_symlink():
+            for pat in set(["*/", "*" + os.sep]):
+                _check(p.glob(pat), ["dirA", "dirB", "dirC", "dirE"])
+        else:
+            for pat in set(["*/", "*" + os.sep]):
+                _check(p.glob("*/"), ["dirA", "dirB", "dirC", "dirE", "linkB"])
+
     def test_rglob_common(self):
         def _check(glob, expected):
             self.assertEqual(set(glob), { P(BASE, q) for q in expected })
@@ -1444,6 +1451,15 @@ class _BasePathTest(object):
                                         "linkB/fileB", "dirA/linkC/fileB"])
         _check(p.rglob("file*"), ["fileA", "dirB/fileB",
                                   "dirC/fileC", "dirC/dirD/fileD"])
+        if not support.can_symlink():
+            for pat in set(["*/", "*" + os.sep]):
+                _check(p.rglob(pat), ["dirA", "dirB", "dirC", "dirC/dirD",
+                    "dirE"])
+        else:
+            for pat in set(["*/", "*" + os.sep]):
+                _check(p.rglob(pat), ["dirA", "dirA/linkC", "dirB",
+                    "dirB/linkD", "dirC", "dirC/dirD", "dirE", "linkB"])
+
         p = P(BASE, "dirC")
         _check(p.rglob("file*"), ["dirC/fileC", "dirC/dirD/fileD"])
         _check(p.rglob("*/*"), ["dirC/dirD/fileD"])
@@ -2236,11 +2252,13 @@ class WindowsPathTest(_BasePathTest, unittest.TestCase):
         P = self.cls
         p = P(BASE)
         self.assertEqual(set(p.glob("FILEa")), { P(BASE, "fileA") })
+        self.assertEqual(set(p.glob("*a\\")), { P(BASE, "dirA") })
 
     def test_rglob(self):
         P = self.cls
         p = P(BASE, "dirC")
         self.assertEqual(set(p.rglob("FILEd")), { P(BASE, "dirC/dirD/fileD") })
+        self.assertEqual(set(p.rglob("*\\")), { P(BASE, "dirC/dirD") })
 
     def test_expanduser(self):
         P = self.cls

@@ -177,6 +177,11 @@ pathlib
 contain characters unrepresentable at the OS level.
 (Contributed by Serhiy Storchaka in :issue:`33721`.)
 
+:meth:`~pathlib.Path.glob` and :meth:`~pathlib.Path.rglob` return only
+directories if *pattern* ends with a pathname components separator:
+``/`` or :data:`~os.sep`.
+(Contributed by Eisuke Kawasima in :issue:`22276` and :issue:`33392`.)
+
 ssl
 ---
 

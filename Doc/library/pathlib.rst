@@ -750,6 +750,9 @@ call fails (for example because the path doesn't exist).
       Using the "``**``" pattern in large directory trees may consume
       an inordinate amount of time.
 
+   .. versionchanged:: 3.8
+      Return only directories if *pattern* ends with a pathname components
+      separator (``/`` or :data:`~os.sep`).
 
 .. method:: Path.group()
 
@@ -990,6 +993,9 @@ call fails (for example because the path doesn't exist).
        PosixPath('setup.py'),
        PosixPath('test_pathlib.py')]
 
+   .. versionchanged:: 3.8
+      Return only directories if *pattern* ends with a pathname components
+      separator (``/`` or :data:`~os.sep`).
 
 .. method:: Path.rmdir()
 
