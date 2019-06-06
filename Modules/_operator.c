@@ -1011,15 +1011,12 @@ itemgetter_call(itemgetterobject *ig, PyObject *args, PyObject *kw)
     Py_ssize_t i, nitems=ig->nitems;
 
     assert(PyTuple_CheckExact(args));
-    if (kw == NULL && PyTuple_GET_SIZE(args) == 1) {
-        obj = PyTuple_GET_ITEM(args, 0);
-    }
-    else {
-        if (!_PyArg_NoKeywords("itemgetter", kw))
-            return NULL;
-        if (!PyArg_UnpackTuple(args, "itemgetter", 1, 1, &obj))
-            return NULL;
-    }
+    if (!_PyArg_NoKeywords("itemgetter", kw))
+        return NULL;
+    if (!_PyArg_CheckPositional("itemgetter", PyTuple_GET_SIZE(args), 1, 1))
+        return NULL;
+
+    obj = PyTuple_GET_ITEM(args, 0);
     if (nitems == 1) {
         if (ig->index >= 0
             && PyTuple_CheckExact(obj)
@@ -1101,10 +1098,10 @@ static PyTypeObject itemgetter_type = {
     0,                                  /* tp_itemsize */
     /* methods */
     (destructor)itemgetter_dealloc,     /* tp_dealloc */
-    0,                                  /* tp_print */
+    0,                                  /* tp_vectorcall_offset */
     0,                                  /* tp_getattr */
     0,                                  /* tp_setattr */
-    0,                                  /* tp_reserved */
+    0,                                  /* tp_as_async */
     (reprfunc)itemgetter_repr,          /* tp_repr */
     0,                                  /* tp_as_number */
     0,                                  /* tp_as_sequence */
@@ -1317,8 +1314,9 @@ attrgetter_call(attrgetterobject *ag, PyObject *args, PyObject *kw)
 
     if (!_PyArg_NoKeywords("attrgetter", kw))
         return NULL;
-    if (!PyArg_UnpackTuple(args, "attrgetter", 1, 1, &obj))
+    if (!_PyArg_CheckPositional("attrgetter", PyTuple_GET_SIZE(args), 1, 1))
         return NULL;
+    obj = PyTuple_GET_ITEM(args, 0);
     if (ag->nattrs == 1) /* ag->attr is always a tuple */
         return dotted_getattr(obj, PyTuple_GET_ITEM(ag->attr, 0));
 
@@ -1445,10 +1443,10 @@ static PyTypeObject attrgetter_type = {
     0,                                  /* tp_itemsize */
     /* methods */
     (destructor)attrgetter_dealloc,     /* tp_dealloc */
-    0,                                  /* tp_print */
+    0,                                  /* tp_vectorcall_offset */
     0,                                  /* tp_getattr */
     0,                                  /* tp_setattr */
-    0,                                  /* tp_reserved */
+    0,                                  /* tp_as_async */
     (reprfunc)attrgetter_repr,          /* tp_repr */
     0,                                  /* tp_as_number */
     0,                                  /* tp_as_sequence */
@@ -1561,8 +1559,9 @@ methodcaller_call(methodcallerobject *mc, PyObject *args, PyObject *kw)
 
     if (!_PyArg_NoKeywords("methodcaller", kw))
         return NULL;
-    if (!PyArg_UnpackTuple(args, "methodcaller", 1, 1, &obj))
+    if (!_PyArg_CheckPositional("methodcaller", PyTuple_GET_SIZE(args), 1, 1))
         return NULL;
+    obj = PyTuple_GET_ITEM(args, 0);
     method = PyObject_GetAttr(obj, mc->name);
     if (method == NULL)
         return NULL;
@@ -1710,10 +1709,10 @@ static PyTypeObject methodcaller_type = {
     0,                                  /* tp_itemsize */
     /* methods */
     (destructor)methodcaller_dealloc, /* tp_dealloc */
-    0,                                  /* tp_print */
+    0,                                  /* tp_vectorcall_offset */
     0,                                  /* tp_getattr */
     0,                                  /* tp_setattr */
-    0,                                  /* tp_reserved */
+    0,                                  /* tp_as_async */
     (reprfunc)methodcaller_repr,        /* tp_repr */
     0,                                  /* tp_as_number */
     0,                                  /* tp_as_sequence */

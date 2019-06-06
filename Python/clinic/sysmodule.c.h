@@ -2,6 +2,38 @@
 preserve
 [clinic start generated code]*/
 
+PyDoc_STRVAR(sys_addaudithook__doc__,
+"addaudithook($module, /, hook)\n"
+"--\n"
+"\n"
+"Adds a new audit hook callback.");
+
+#define SYS_ADDAUDITHOOK_METHODDEF    \
+    {"addaudithook", (PyCFunction)(void(*)(void))sys_addaudithook, METH_FASTCALL|METH_KEYWORDS, sys_addaudithook__doc__},
+
+static PyObject *
+sys_addaudithook_impl(PyObject *module, PyObject *hook);
+
+static PyObject *
+sys_addaudithook(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *return_value = NULL;
+    static const char * const _keywords[] = {"hook", NULL};
+    static _PyArg_Parser _parser = {NULL, _keywords, "addaudithook", 0};
+    PyObject *argsbuf[1];
+    PyObject *hook;
+
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 1, 1, 0, argsbuf);
+    if (!args) {
+        goto exit;
+    }
+    hook = args[0];
+    return_value = sys_addaudithook_impl(module, hook);
+
+exit:
+    return return_value;
+}
+
 PyDoc_STRVAR(sys_displayhook__doc__,
 "displayhook($module, object, /)\n"
 "--\n"
@@ -32,11 +64,12 @@ sys_excepthook(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
     PyObject *value;
     PyObject *traceback;
 
-    if (!_PyArg_UnpackStack(args, nargs, "excepthook",
-        3, 3,
-        &exctype, &value, &traceback)) {
+    if (!_PyArg_CheckPositional("excepthook", nargs, 3, 3)) {
         goto exit;
     }
+    exctype = args[0];
+    value = args[1];
+    traceback = args[2];
     return_value = sys_excepthook_impl(module, exctype, value, traceback);
 
 exit:
@@ -64,6 +97,23 @@ sys_exc_info(PyObject *module, PyObject *Py_UNUSED(ignored))
     return sys_exc_info_impl(module);
 }
 
+PyDoc_STRVAR(sys_unraisablehook__doc__,
+"unraisablehook($module, unraisable, /)\n"
+"--\n"
+"\n"
+"Handle an unraisable exception.\n"
+"\n"
+"The unraisable argument has the following attributes:\n"
+"\n"
+"* exc_type: Exception type.\n"
+"* exc_value: Exception value, can be None.\n"
+"* exc_traceback: Exception traceback, can be None.\n"
+"* err_msg: Error message, can be None.\n"
+"* object: Object causing the exception, can be None.");
+
+#define SYS_UNRAISABLEHOOK_METHODDEF    \
+    {"unraisablehook", (PyCFunction)sys_unraisablehook, METH_O, sys_unraisablehook__doc__},
+
 PyDoc_STRVAR(sys_exit__doc__,
 "exit($module, status=None, /)\n"
 "--\n"
@@ -87,11 +137,14 @@ sys_exit(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
     PyObject *return_value = NULL;
     PyObject *status = NULL;
 
-    if (!_PyArg_UnpackStack(args, nargs, "exit",
-        0, 1,
-        &status)) {
+    if (!_PyArg_CheckPositional("exit", nargs, 0, 1)) {
         goto exit;
     }
+    if (nargs < 1) {
+        goto skip_optional;
+    }
+    status = args[0];
+skip_optional:
     return_value = sys_exit_impl(module, status);
 
 exit:
@@ -175,7 +228,7 @@ sys_intern(PyObject *module, PyObject *arg)
     PyObject *s;
 
     if (!PyUnicode_Check(arg)) {
-        _PyArg_BadArgument("intern", "str", arg);
+        _PyArg_BadArgument("intern", 0, "str", arg);
         goto exit;
     }
     if (PyUnicode_READY(arg) == -1) {
@@ -406,11 +459,21 @@ sys_set_coroutine_origin_tracking_depth(PyObject *module, PyObject *const *args,
 {
     PyObject *return_value = NULL;
     static const char * const _keywords[] = {"depth", NULL};
-    static _PyArg_Parser _parser = {"i:set_coroutine_origin_tracking_depth", _keywords, 0};
+    static _PyArg_Parser _parser = {NULL, _keywords, "set_coroutine_origin_tracking_depth", 0};
+    PyObject *argsbuf[1];
     int depth;
 
-    if (!_PyArg_ParseStackAndKeywords(args, nargs, kwnames, &_parser,
-        &depth)) {
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser, 1, 1, 0, argsbuf);
+    if (!args) {
+        goto exit;
+    }
+    if (PyFloat_Check(args[0])) {
+        PyErr_SetString(PyExc_TypeError,
+                        "integer argument expected, got float" );
+        goto exit;
+    }
+    depth = _PyLong_AsInt(args[0]);
+    if (depth == -1 && PyErr_Occurred()) {
         goto exit;
     }
     return_value = sys_set_coroutine_origin_tracking_depth_impl(module, depth);
@@ -445,33 +508,6 @@ sys_get_coroutine_origin_tracking_depth(PyObject *module, PyObject *Py_UNUSED(ig
 
 exit:
     return return_value;
-}
-
-PyDoc_STRVAR(sys_set_coroutine_wrapper__doc__,
-"set_coroutine_wrapper($module, wrapper, /)\n"
-"--\n"
-"\n"
-"Set a wrapper for coroutine objects.");
-
-#define SYS_SET_COROUTINE_WRAPPER_METHODDEF    \
-    {"set_coroutine_wrapper", (PyCFunction)sys_set_coroutine_wrapper, METH_O, sys_set_coroutine_wrapper__doc__},
-
-PyDoc_STRVAR(sys_get_coroutine_wrapper__doc__,
-"get_coroutine_wrapper($module, /)\n"
-"--\n"
-"\n"
-"Return the wrapper for coroutines set by sys.set_coroutine_wrapper.");
-
-#define SYS_GET_COROUTINE_WRAPPER_METHODDEF    \
-    {"get_coroutine_wrapper", (PyCFunction)sys_get_coroutine_wrapper, METH_NOARGS, sys_get_coroutine_wrapper__doc__},
-
-static PyObject *
-sys_get_coroutine_wrapper_impl(PyObject *module);
-
-static PyObject *
-sys_get_coroutine_wrapper(PyObject *module, PyObject *Py_UNUSED(ignored))
-{
-    return sys_get_coroutine_wrapper_impl(module);
 }
 
 PyDoc_STRVAR(sys_get_asyncgen_hooks__doc__,
@@ -819,10 +855,22 @@ sys__getframe(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
     PyObject *return_value = NULL;
     int depth = 0;
 
-    if (!_PyArg_ParseStack(args, nargs, "|i:_getframe",
-        &depth)) {
+    if (!_PyArg_CheckPositional("_getframe", nargs, 0, 1)) {
         goto exit;
     }
+    if (nargs < 1) {
+        goto skip_optional;
+    }
+    if (PyFloat_Check(args[0])) {
+        PyErr_SetString(PyExc_TypeError,
+                        "integer argument expected, got float" );
+        goto exit;
+    }
+    depth = _PyLong_AsInt(args[0]);
+    if (depth == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+skip_optional:
     return_value = sys__getframe_impl(module, depth);
 
 exit:
@@ -872,10 +920,15 @@ sys_call_tracing(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
     PyObject *func;
     PyObject *funcargs;
 
-    if (!_PyArg_ParseStack(args, nargs, "OO!:call_tracing",
-        &func, &PyTuple_Type, &funcargs)) {
+    if (!_PyArg_CheckPositional("call_tracing", nargs, 2, 2)) {
         goto exit;
     }
+    func = args[0];
+    if (!PyTuple_Check(args[1])) {
+        _PyArg_BadArgument("call_tracing", 2, "tuple", args[1]);
+        goto exit;
+    }
+    funcargs = args[1];
     return_value = sys_call_tracing_impl(module, func, funcargs);
 
 exit:
@@ -1029,4 +1082,4 @@ sys_getandroidapilevel(PyObject *module, PyObject *Py_UNUSED(ignored))
 #ifndef SYS_GETANDROIDAPILEVEL_METHODDEF
     #define SYS_GETANDROIDAPILEVEL_METHODDEF
 #endif /* !defined(SYS_GETANDROIDAPILEVEL_METHODDEF) */
-/*[clinic end generated code: output=0e662f2e19293d57 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=43c4fde7b5783d8d input=a9049054013a1b77]*/

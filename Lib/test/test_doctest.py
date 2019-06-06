@@ -665,11 +665,13 @@ plain ol' Python and is guaranteed to be available.
     True
     >>> real_tests = [t for t in tests if len(t.examples) > 0]
     >>> len(real_tests) # objects that actually have doctests
-    9
+    12
     >>> for t in real_tests:
     ...     print('{}  {}'.format(len(t.examples), t.name))
     ...
     1  builtins.bin
+    5  builtins.bytearray.hex
+    5  builtins.bytes.hex
     3  builtins.float.as_integer_ratio
     2  builtins.float.fromhex
     2  builtins.float.hex
@@ -677,6 +679,7 @@ plain ol' Python and is guaranteed to be available.
     1  builtins.int
     3  builtins.int.as_integer_ratio
     2  builtins.int.bit_length
+    5  builtins.memoryview.hex
     1  builtins.oct
 
 Note here that 'bin', 'oct', and 'hex' are functions; 'float.as_integer_ratio',
@@ -2451,8 +2454,7 @@ def test_unittest_reportflags():
     Then the default eporting options are ignored:
 
       >>> result = suite.run(unittest.TestResult())
-    """
-    """
+
     *NOTE*: These doctest are intentionally not placed in raw string to depict
     the trailing whitespace using `\x20` in the diff below.
 
