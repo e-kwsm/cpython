@@ -60,6 +60,7 @@ _PyRuntimeState_Init_impl(_PyRuntimeState *runtime)
 
     _PyGC_Initialize(&runtime->gc);
     _PyEval_Initialize(&runtime->ceval);
+
     PyPreConfig_InitPythonConfig(&runtime->preconfig);
 
     runtime->gilstate.check_enabled = 1;
@@ -203,16 +204,8 @@ PyInterpreterState_New(void)
 
     memset(interp, 0, sizeof(*interp));
     interp->id_refcount = -1;
-    interp->check_interval = 100;
 
-    PyStatus status = PyConfig_InitPythonConfig(&interp->config);
-    if (_PyStatus_EXCEPTION(status)) {
-        /* Don't report status to caller: PyConfig_InitPythonConfig()
-           can only fail with a memory allocation error. */
-        PyConfig_Clear(&interp->config);
-        PyMem_RawFree(interp);
-        return NULL;
-    }
+    PyConfig_InitPythonConfig(&interp->config);
 
     interp->eval_frame = _PyEval_EvalFrameDefault;
 #ifdef HAVE_DLOPEN
@@ -685,7 +678,7 @@ _PyState_AddModule(PyObject* module, struct PyModuleDef* def)
         if (!state->modules_by_index)
             return -1;
     }
-    while(PyList_GET_SIZE(state->modules_by_index) <= def->m_base.m_index)
+    while (PyList_GET_SIZE(state->modules_by_index) <= def->m_base.m_index)
         if (PyList_Append(state->modules_by_index, Py_None) < 0)
             return -1;
     Py_INCREF(module);
@@ -703,13 +696,11 @@ PyState_AddModule(PyObject* module, struct PyModuleDef* def)
         return -1;
     }
     index = def->m_base.m_index;
-    if (state->modules_by_index) {
-        if(PyList_GET_SIZE(state->modules_by_index) >= index) {
-            if(module == PyList_GET_ITEM(state->modules_by_index, index)) {
-                Py_FatalError("PyState_AddModule: Module already added!");
-                return -1;
-            }
-        }
+    if (state->modules_by_index &&
+        index < PyList_GET_SIZE(state->modules_by_index) &&
+        module == PyList_GET_ITEM(state->modules_by_index, index)) {
+        Py_FatalError("PyState_AddModule: Module already added!");
+        return -1;
     }
     return _PyState_AddModule(module, def);
 }
@@ -730,7 +721,7 @@ PyState_RemoveModule(struct PyModuleDef* def)
         return -1;
     }
     if (state->modules_by_index == NULL) {
-        Py_FatalError("PyState_RemoveModule: Interpreters module-list not acessible.");
+        Py_FatalError("PyState_RemoveModule: Interpreters module-list not accessible.");
         return -1;
     }
     if (index > PyList_GET_SIZE(state->modules_by_index)) {
@@ -741,28 +732,32 @@ PyState_RemoveModule(struct PyModuleDef* def)
     return PyList_SetItem(state->modules_by_index, index, Py_None);
 }
 
-/* used by import.c:PyImport_Cleanup */
+/* Used by PyImport_Cleanup() */
 void
-_PyState_ClearModules(void)
+_PyInterpreterState_ClearModules(PyInterpreterState *interp)
 {
-    PyInterpreterState *state = _PyInterpreterState_GET_UNSAFE();
-    if (state->modules_by_index) {
-        Py_ssize_t i;
-        for (i = 0; i < PyList_GET_SIZE(state->modules_by_index); i++) {
-            PyObject *m = PyList_GET_ITEM(state->modules_by_index, i);
-            if (PyModule_Check(m)) {
-                /* cleanup the saved copy of module dicts */
-                PyModuleDef *md = PyModule_GetDef(m);
-                if (md)
-                    Py_CLEAR(md->m_base.m_copy);
+    if (!interp->modules_by_index) {
+        return;
+    }
+
+    Py_ssize_t i;
+    for (i = 0; i < PyList_GET_SIZE(interp->modules_by_index); i++) {
+        PyObject *m = PyList_GET_ITEM(interp->modules_by_index, i);
+        if (PyModule_Check(m)) {
+            /* cleanup the saved copy of module dicts */
+            PyModuleDef *md = PyModule_GetDef(m);
+            if (md) {
+                Py_CLEAR(md->m_base.m_copy);
             }
         }
-        /* Setting modules_by_index to NULL could be dangerous, so we
-           clear the list instead. */
-        if (PyList_SetSlice(state->modules_by_index,
-                            0, PyList_GET_SIZE(state->modules_by_index),
-                            NULL))
-            PyErr_WriteUnraisable(state->modules_by_index);
+    }
+
+    /* Setting modules_by_index to NULL could be dangerous, so we
+       clear the list instead. */
+    if (PyList_SetSlice(interp->modules_by_index,
+                        0, PyList_GET_SIZE(interp->modules_by_index),
+                        NULL)) {
+        PyErr_WriteUnraisable(interp->modules_by_index);
     }
 }
 
@@ -855,7 +850,7 @@ PyThreadState_Delete(PyThreadState *tstate)
 }
 
 
-static void
+void
 _PyThreadState_DeleteCurrent(_PyRuntimeState *runtime)
 {
     struct _gilstate_runtime_state *gilstate = &runtime->gilstate;
@@ -874,7 +869,7 @@ _PyThreadState_DeleteCurrent(_PyRuntimeState *runtime)
 }
 
 void
-PyThreadState_DeleteCurrent()
+PyThreadState_DeleteCurrent(void)
 {
     _PyThreadState_DeleteCurrent(&_PyRuntime);
 }
@@ -885,7 +880,7 @@ PyThreadState_DeleteCurrent()
  * Note that, if there is a current thread state, it *must* be the one
  * passed as argument.  Also, this won't touch any other interpreters
  * than the current one, since we don't know which thread state should
- * be kept in those other interpreteres.
+ * be kept in those other interpreters.
  */
 void
 _PyThreadState_DeleteExcept(_PyRuntimeState *runtime, PyThreadState *tstate)
@@ -1139,19 +1134,18 @@ PyThreadState_IsCurrent(PyThreadState *tstate)
    Py_Initialize/Py_FinalizeEx
 */
 void
-_PyGILState_Init(_PyRuntimeState *runtime,
-                 PyInterpreterState *interp, PyThreadState *tstate)
+_PyGILState_Init(_PyRuntimeState *runtime, PyThreadState *tstate)
 {
     /* must init with valid states */
-    assert(interp != NULL);
     assert(tstate != NULL);
+    assert(tstate->interp != NULL);
 
     struct _gilstate_runtime_state *gilstate = &runtime->gilstate;
 
     if (PyThread_tss_create(&gilstate->autoTSSkey) != 0) {
         Py_FatalError("Could not allocate TSS entry");
     }
-    gilstate->autoInterpreterState = interp;
+    gilstate->autoInterpreterState = tstate->interp;
     assert(PyThread_tss_get(&gilstate->autoTSSkey) == NULL);
     assert(tstate->gilstate_counter == 0);
 
@@ -1497,7 +1491,7 @@ _PyCrossInterpreterData_Release(_PyCrossInterpreterData *data)
     // Switch to the original interpreter.
     PyInterpreterState *interp = _PyInterpreterState_LookUpID(data->interp);
     if (interp == NULL) {
-        // The intepreter was already destroyed.
+        // The interpreter was already destroyed.
         if (data->free != NULL) {
             // XXX Someone leaked some memory...
         }

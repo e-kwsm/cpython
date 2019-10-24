@@ -43,7 +43,7 @@ typedef struct arrayobject {
     Py_ssize_t allocated;
     const struct arraydescr *ob_descr;
     PyObject *weakreflist; /* List of weak references */
-    int ob_exports;  /* Number of exported buffers */
+    Py_ssize_t ob_exports;  /* Number of exported buffers */
 } arrayobject;
 
 static PyTypeObject Arraytype;
@@ -185,9 +185,7 @@ in bounds; that's the responsibility of the caller.
 static PyObject *
 b_getitem(arrayobject *ap, Py_ssize_t i)
 {
-    long x = ((char *)ap->ob_item)[i];
-    if (x >= 128)
-        x -= 256;
+    long x = ((signed char *)ap->ob_item)[i];
     return PyLong_FromLong(x);
 }
 
@@ -1507,7 +1505,7 @@ array_array_tofile(arrayobject *self, PyObject *f)
         bytes = PyBytes_FromStringAndSize(ptr, size);
         if (bytes == NULL)
             return NULL;
-        res = _PyObject_CallMethodIdObjArgs(f, &PyId_write, bytes, NULL);
+        res = _PyObject_CallMethodIdOneArg(f, &PyId_write, bytes);
         Py_DECREF(bytes);
         if (res == NULL)
             return NULL;
